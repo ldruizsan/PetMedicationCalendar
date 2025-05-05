@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pet Medication Scheduler</title>
+    <style>
+        /* --- Basic Styling (Keep as is or enhance) --- */
+        body { font-family: sans-serif; margin: 20px; }
+        .container { max-width: 1000px; margin: auto; }
+        .section { margin-bottom: 30px; padding: 20px; border: 1px solid #eee; border-radius: 5px; }
+        .section h2 { margin-top: 0; border-bottom: 1px solid #ccc; padding-bottom: 10px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"], input[type="number"], select, input[type="date"] { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { padding: 10px 15px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 5px; margin-top: 5px; }
+        button:hover { background-color: #0056b3; }
+        button[disabled] { background-color: #ccc; cursor: not-allowed; }
+        /* MODIFIED: Simplified med list display */
+        .med-details { padding: 10px 0; border-bottom: 1px solid #eee; }
+        .med-details-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;}
+        .med-details-header strong { font-size: 1.1em; }
+        .med-details form { margin-bottom: 0; }
+        .med-step { margin-left: 20px; padding: 5px 0; border-bottom: 1px dashed #eee; }
+        .med-step:last-child { border-bottom: none; }
+        .remove-button { background-color: #dc3545; font-size: 0.8em; padding: 5px 8px; }
+        .remove-button:hover { background-color: #c82333; }
+        .add-step-button { background-color: #28a745; font-size: 0.9em; }
+        .add-step-button:hover { background-color: #218838; }
+        .flash-messages { list-style: none; padding: 0; margin-bottom: 15px; }
+        .flash-messages li { padding: 10px; margin-bottom: 10px; border-radius: 4px; }
+        .flash-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .flash-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .flash-warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+        .flash-info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .controls-row { display: flex; align-items: flex-end; gap: 10px; }
+        .controls-row > div { flex-grow: 1; }
+        .controls-row > div:last-child { flex-grow: 0; }
+        #calendar { max-width: 1100px; margin: 40px auto; }
+        .dosage-step-row { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 10px; padding: 10px; border: 1px dashed #ddd; border-radius: 4px; background-color: #f9f9f9; }
+        .dosage-step-row > div { flex: 1; min-width: 140px; }
+        .event-checkbox { margin-right: 5px; vertical-align: middle; cursor: pointer; }
+        .event-text { vertical-align: middle; display: inline-block; }
+    </style>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+</head>
+<body>
+    <div class="container">
+        <h1>🐾 Pet Medication Dosage Scheduler 💊</h1>
+        <p>Easily visualize your pet's medication schedule.</p>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <ul class=flash-messages>
+            {% for category, message in messages %}
+              <li class="flash-{{ category }}">{{ message }}</li>
+            {% endfor %}
+            </ul>
+          {% endif %}
+        {% endwith %}
+
+        <!-- Instructions Section -->
+        <div class="section">
+            <h2>ℹ️ How to Use</h2>
+            <ol>
+                <li>Fill in <strong>Pet Details</strong>. Click 'Update Pet Details'.</li>
+                <!-- MODIFIED Instructions -->
+                <li>Use <strong>Set Medication</strong>: enter Name. Add dosage steps using 'Add Dosage Step'. Fill details for each step. Click 'Set/Update Med' to save (this replaces any existing medication).</li>
+                <li>The current medication details appear under <strong>Current Medication</strong>. Remove using '❌'.</li>
+                <li>Click <strong>'Refresh Calendar'</strong> to update the calendar display.</li>
+                <li>The <strong>Medication Calendar</strong> shows the schedule. Checkboxes are for visual tracking only.</li>
+                <li>Use <strong>'Clear Medication'</strong> in the controls section to remove the current medication.</li>
+            </ol>
+             <p><strong>Disclaimer:</strong> Visualization only. Follow vet instructions.</p>
+        </div>
+
+        <!-- Pet Details Form (Keep as is) -->
+        <div class="section">
+            <h2>📋 Pet Details</h2>
+            <form action="{{ url_for('update_pet') }}" method="post">
+                 <div><label for="pet_name">Pet Name:</label><input type="text" id="pet_name" name="pet_name" value="{{ pet_details.get('name', '') }}" placeholder="e.g., Buddy"></div>
+                 <div><label>Pet Type:</label><input type="radio" id="pet_type_dog" name="pet_type" value="Dog" {% if pet_details.get('type', 'Dog') == 'Dog' %}checked{% endif %}><label for="pet_type_dog" style="display: inline; margin-right: 10px;">Dog</label><input type="radio" id="pet_type_cat" name="pet_type" value="Cat" {% if pet_details.get('type') == 'Cat' %}checked{% endif %}><label for="pet_type_cat" style="display: inline;">Cat</label></div>
+                 <div><label for="pet_age">Pet Age (years):</label><input type="number" id="pet_age" name="pet_age" min="0" max="30" step="1" value="{{ pet_details.get('age', 1) }}"></div>
+                 <div><label for="pet_weight">Pet Weight (kg or lbs):</label><input type="number" id="pet_weight" name="pet_weight" min="0.1" step="0.1" value="{{ pet_details.get('weight', 5.0) }}"></div>
+                 <button type="submit">Update Pet Details</button>
+            </form>
+        </div>
+
+        <!-- Set Medication Form -->
+        <div class="section">
+             <!-- MODIFIED Header -->
+            <h2>💊 Set Medication</h2>
+             <!-- MODIFIED Form Action -->
+            <form action="{{ url_for('set_med') }}" method="post" id="set-med-form">
+                 <div>
+                    <label for="med_name">Medication Name:</label>
+                    <!-- MODIFIED: Pre-fill name if medication exists -->
+                    <input type="text" id="med_name" name="med_name" placeholder="e.g., Prednisone" value="{{ current_medication.name if current_medication else '' }}" required>
+                 </div>
+                 <hr>
+                 <h4>Dosage Steps:</h4>
+                 <div id="dosage-steps-container">
+                     <!-- MODIFIED: Logic to render existing steps or default first row -->
+                     {% if current_medication and current_medication.steps %}
+                         {% for step in current_medication.steps %}
+                         <div class="dosage-step-row">
+                             <div><label>Amount:</label><input type="number" name="dosage_step" min="0.01" step="0.01" value="{{ step.dosage }}" required></div>
+                             <div><label>Unit Type:</label><select name="type_step" required><option value="Tablet(s)" {% if step.type == 'Tablet(s)' %}selected{% endif %}>Tablet(s)</option><option value="mL" {% if step.type == 'mL' %}selected{% endif %}>mL</option><option value="mg" {% if step.type == 'mg' %}selected{% endif %}>mg</option></select></div>
+                             <div><label>Frequency (Hr):</label><input type="number" name="freq_hr_step" min="1" step="1" value="{{ step.frequency_hr }}" required></div>
+                             <div><label>Duration (Days):</label><input type="number" name="duration_step" min="1" step="1" value="{{ step.duration_days }}" required class="duration-input"></div>
+                             <div><label>Start Date:</label><input type="date" name="start_date_step" value="{{ step.start_date }}" required class="start-date-input"></div>
+                         </div>
+                         {% endfor %}
+                     {% else %}
+                         <!-- Default first row if no medication is set -->
+                         <div class="dosage-step-row">
+                             <div><label>Amount:</label><input type="number" name="dosage_step" min="0.01" step="0.01" required></div>
+                             <div><label>Unit Type:</label><select name="type_step" required><option value="Tablet(s)">Tablet(s)</option><option value="mL">mL</option><option value="mg">mg</option></select></div>
+                             <div><label>Frequency (Hr):</label><input type="number" name="freq_hr_step" min="1" step="1" value="24" required></div>
+                             <div><label>Duration (Days):</label><input type="number" name="duration_step" min="1" step="1" value="7" required class="duration-input"></div>
+                             <div><label>Start Date:</label><input type="date" name="start_date_step" required class="start-date-input"></div>
+                         </div>
+                     {% endif %}
+                 </div>
+                 <button type="button" id="add-step-btn" class="add-step-button">Add Dosage Step</button>
+                 <hr>
+                 <!-- MODIFIED Button Text -->
+                 <button type="submit">Set / Update Med</button>
+            </form>
+        </div>
+
+        <!-- Current Medication Details -->
+        <div class="section">
+             <!-- MODIFIED Header and Content -->
+            <h2>📝 Current Medication</h2>
+            {% if current_medication %}
+                <div class="med-details">
+                    <div class="med-details-header">
+                        <strong>{{ current_medication.name }}</strong>
+                        <!-- MODIFIED Form Action -->
+                        <form action="{{ url_for('clear_medication') }}" method="post" style="display: inline;">
+                             <button type="submit" class="remove-button" title="Clear this medication">❌</button>
+                        </form>
+                    </div>
+                    {% for step in current_medication.steps %}
+                    <div class="med-step">
+                        &bull; {{ "%.2f"|format(step.dosage) }} {{ step.type }}
+                        every {{ step.frequency_hr }} hr(s)
+                        for {{ step.duration_days }} day(s)
+                        starting <strong>{{ step.start_date }}</strong>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p>No medication set yet.</p>
+            {% endif %}
+        </div>
+
+        <!-- Schedule Controls -->
+        <div class="section">
+            <h2>🗓️ Schedule Controls</h2>
+            <div class="controls-row">
+                 <div><button id="refresh-calendar-btn">Refresh Calendar</button></div>
+                 <div>
+                      <!-- MODIFIED Form Action and Button Text/Condition -->
+                     <form action="{{ url_for('clear_medication') }}" method="post" style="display: inline;">
+                        <button type="submit" {% if not current_medication %}disabled{% endif %}>Clear Medication</button>
+                    </form>
+                 </div>
+            </div>
+        </div>
+
+        <!-- Calendar Display Area -->
+        <div class="section">
+             <!-- MODIFIED: Display Single Medication Name -->
+             <h2>
+                 📅 Medication Calendar
+                 {% if current_medication %}
+                     for: {{ current_medication.name }}
+                 {% else %}
+                     (No medication set)
+                 {% endif %}
+             </h2>
+             <div id='calendar'></div>
+        </div>
+
+    </div> <!-- /container -->
+
+    <!-- JavaScript (Keep calendar init and dynamic form logic as is) -->
+    <script>
+        // Function to get today's date in YYYY-MM-DD format
+        function getTodayDate() { /* Keep as is */
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+        // Function to add days to a date string (YYYY-MM-DD)
+        function addDaysToDate(dateString, days) { /* Keep as is */
+            if (!dateString) return '';
+            try {
+                const date = new Date(dateString + 'T00:00:00');
+                date.setDate(date.getDate() + days);
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            } catch (e) { console.error("Error calculating next date:", e); return ''; }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- Dynamic Form Logic ---
+            const stepsContainer = document.getElementById('dosage-steps-container');
+            const addStepBtn = document.getElementById('add-step-btn');
+
+            // Set default date only if no medication is loaded initially
+            const firstStartDateInput = stepsContainer.querySelector('.start-date-input');
+            // Check if the container has any step rows already (from backend)
+            const hasExistingSteps = stepsContainer.querySelector('.dosage-step-row');
+            if (firstStartDateInput && !hasExistingSteps) { // Only set default if no steps loaded
+                 if (!firstStartDateInput.value) {
+                    firstStartDateInput.value = getTodayDate();
+                 }
+            }
+
+
+            addStepBtn.addEventListener('click', function() {
+                const allStepRows = stepsContainer.querySelectorAll('.dosage-step-row');
+                // Find the *template* row to clone - let's assume the first one is always present or create one if needed
+                let templateRow = allStepRows.length > 0 ? allStepRows[0] : null; // Or have a hidden template
+                if (!templateRow) { // Fallback: create a basic row structure if none exist
+                    console.warn("No template row found, creating default.");
+                    templateRow = document.createElement('div');
+                    templateRow.className = 'dosage-step-row';
+                    templateRow.innerHTML = `
+                         <div><label>Amount:</label><input type="number" name="dosage_step" min="0.01" step="0.01" required></div>
+                         <div><label>Unit Type:</label><select name="type_step" required><option value="Tablet(s)">Tablet(s)</option><option value="mL">mL</option><option value="mg">mg</option></select></div>
+                         <div><label>Frequency (Hr):</label><input type="number" name="freq_hr_step" min="1" step="1" value="24" required></div>
+                         <div><label>Duration (Days):</label><input type="number" name="duration_step" min="1" step="1" value="7" required class="duration-input"></div>
+                         <div><label>Start Date:</label><input type="date" name="start_date_step" required class="start-date-input"></div>
+                    `;
+                }
+
+                const lastStepRow = allStepRows.length > 0 ? allStepRows[allStepRows.length - 1] : templateRow; // Use template if it's the first added row
+                const newStepRow = templateRow.cloneNode(true); // Clone the template or last row
+
+                // Find inputs in the *last actual* row to calculate the next start date
+                const prevStartDateInput = lastStepRow.querySelector('.start-date-input');
+                const prevDurationInput = lastStepRow.querySelector('.duration-input');
+
+                // Find inputs in the *new* row to clear/set values
+                const newStartDateInput = newStepRow.querySelector('.start-date-input');
+                const newDurationInput = newStepRow.querySelector('.duration-input');
+                const newDosageInput = newStepRow.querySelector('input[name="dosage_step"]');
+
+                let nextStartDate = '';
+                if (prevStartDateInput && prevDurationInput && prevStartDateInput.value && prevDurationInput.value) {
+                    const prevDurationDays = parseInt(prevDurationInput.value, 10);
+                    if (!isNaN(prevDurationDays) && prevDurationDays > 0) {
+                         nextStartDate = addDaysToDate(prevStartDateInput.value, prevDurationDays);
+                    }
+                }
+
+                if (newStartDateInput) { newStartDateInput.value = nextStartDate || getTodayDate(); }
+                if (newDurationInput) newDurationInput.value = '7'; // Reset duration
+                if (newDosageInput) newDosageInput.value = ''; // Clear dosage
+
+                stepsContainer.appendChild(newStepRow);
+            });
+
+            // --- Calendar Logic (Keep as is, including eventContent) ---
+            const calendarEl = document.getElementById('calendar');
+            const calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth' },
+                navLinks: true, dayMaxEvents: true, editable: false, selectable: false, height: 'auto',
+                displayEventTime: false,
+                eventContent: function(arg) {
+                    let title = arg.event.title;
+                    let arrayOfNodes = [];
+                    let checkboxNode = document.createElement('input');
+                    checkboxNode.type = 'checkbox';
+                    checkboxNode.className = 'event-checkbox';
+                    checkboxNode.onclick = function() { return false; };
+                    arrayOfNodes.push(checkboxNode);
+                    let textNode = document.createElement('span');
+                    textNode.className = 'event-text';
+                    textNode.textContent = title;
+                    arrayOfNodes.push(textNode);
+                    return { domNodes: arrayOfNodes };
+                },
+                events: function(fetchInfo, successCallback, failureCallback) {
+                    fetch(`/get_schedule_events`)
+                        .then(response => { /* Error handling */
+                            if (!response.ok) { return response.json().then(errData => { throw new Error(errData.error || `HTTP error! status: ${response.status}`); }).catch(() => { throw new Error(`HTTP error! status: ${response.status}`); }); }
+                            return response.json();
+                        })
+                        .then(data => { /* Data processing */
+                            if (data.error) { throw new Error(data.error); }
+                            successCallback(data);
+                        })
+                        .catch(error => { /* Failure */
+                            console.error("Error fetching schedule:", error); failureCallback(error); alert(`Failed to load schedule: ${error.message}. See console for details.`);
+                        });
+                }
+            });
+            calendar.render();
+
+            const refreshBtn = document.getElementById('refresh-calendar-btn');
+            if (refreshBtn) {
+                refreshBtn.addEventListener('click', function() { console.log("Refreshing calendar events..."); calendar.refetchEvents(); });
+            }
+        });
+    </script>
+
+</body>
+</html>
