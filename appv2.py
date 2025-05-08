@@ -1,7 +1,6 @@
 import os
 from flask import Flask, render_template, request, session, jsonify, redirect, url_for, flash
 from datetime import date, timedelta, time, datetime
-import math
 
 # --- Flask App Initialization ---
 app = Flask(__name__)

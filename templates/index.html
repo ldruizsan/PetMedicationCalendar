@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -32,9 +32,9 @@
         .flash-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
         .flash-warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
         .flash-info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
-        .controls-row { display: flex; align-items: flex-end; gap: 10px; }
-        .controls-row > div { flex-grow: 1; }
-        .controls-row > div:last-child { flex-grow: 0; }
+        .controls-row { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; /* Allow wrapping for more buttons */ }
+        .controls-row > div { flex-grow: 1; min-width: 150px; /* Give buttons some min width */ }
+        .controls-row > div:last-child { flex-grow: 0; } /* Let the last specific button not grow if needed */
         #calendar { max-width: 1100px; margin: 40px auto; }
         .dosage-step-row { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 10px; padding: 10px; border: 1px dashed #ddd; border-radius: 4px; background-color: #f9f9f9; }
         .dosage-step-row > div { flex: 1; min-width: 140px; }
@@ -42,6 +42,9 @@
         .event-text { vertical-align: middle; display: inline-block; }
     </style>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+    <!-- ADD THESE SCRIPT TAGS FOR PDF GENERATION -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -64,43 +67,48 @@
             <h2>ℹ️ How to Use</h2>
             <ol>
                 <li>Fill in <strong>Pet Details</strong>. Click 'Update Pet Details'.</li>
-                <!-- MODIFIED Instructions -->
                 <li>Use <strong>Set Medication</strong>: enter Name. Add dosage steps using 'Add Dosage Step'. Fill details for each step. Click 'Set/Update Med' to save (this replaces any existing medication).</li>
                 <li>The current medication details appear under <strong>Current Medication</strong>. Remove using '❌'.</li>
                 <li>Click <strong>'Refresh Calendar'</strong> to update the calendar display.</li>
                 <li>The <strong>Medication Calendar</strong> shows the schedule. Checkboxes are for visual tracking only.</li>
                 <li>Use <strong>'Clear Medication'</strong> in the controls section to remove the current medication.</li>
+                <li>Click <strong>'Download PDF'</strong> to get a printable version of the current calendar view.</li>
             </ol>
              <p><strong>Disclaimer:</strong> Visualization only. Follow vet instructions.</p>
         </div>
 
-        <!-- Pet Details Form (Keep as is) -->
+        <!-- Pet Details Form -->
         <div class="section">
             <h2>📋 Pet Details</h2>
             <form action="{{ url_for('update_pet') }}" method="post">
-                 <div><label for="pet_name">Pet Name:</label><input type="text" id="pet_name" name="pet_name" value="{{ pet_details.get('name', '') }}" placeholder="e.g., Buddy"></div>
-                 <div><label>Pet Type:</label><input type="radio" id="pet_type_dog" name="pet_type" value="Dog" {% if pet_details.get('type', 'Dog') == 'Dog' %}checked{% endif %}><label for="pet_type_dog" style="display: inline; margin-right: 10px;">Dog</label><input type="radio" id="pet_type_cat" name="pet_type" value="Cat" {% if pet_details.get('type') == 'Cat' %}checked{% endif %}><label for="pet_type_cat" style="display: inline;">Cat</label></div>
-                 <div><label for="pet_age">Pet Age (years):</label><input type="number" id="pet_age" name="pet_age" min="0" max="30" step="1" value="{{ pet_details.get('age', 1) }}"></div>
-                 <div><label for="pet_weight">Pet Weight (kg or lbs):</label><input type="number" id="pet_weight" name="pet_weight" min="0.1" step="0.1" value="{{ pet_details.get('weight', 5.0) }}"></div>
+                 <div style="margin-bottom: 15px;"><label for="pet_name">Pet Name:</label><input type="text" id="pet_name" name="pet_name" value="{{ pet_details.get('name', '') }}" placeholder="e.g., Buddy"></div>
+                 <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                    <label style="margin-right: 15px; margin-bottom: 0; flex-shrink: 0; font-weight: bold;">Pet Type:</label>
+                    <div style="display: flex; align-items: center;">
+                        <input type="radio" id="pet_type_dog" name="pet_type" value="Dog" {% if pet_details.get('type', 'Dog') == 'Dog' %}checked{% endif %} style="width: auto; margin-right: 5px; margin-bottom: 0;">
+                        <label for="pet_type_dog" style="display: inline; margin-right: 15px; font-weight: normal; margin-bottom: 0;">Dog</label>
+
+                        <input type="radio" id="pet_type_cat" name="pet_type" value="Cat" {% if pet_details.get('type') == 'Cat' %}checked{% endif %} style="width: auto; margin-right: 5px; margin-bottom: 0;">
+                        <label for="pet_type_cat" style="display: inline; font-weight: normal; margin-bottom: 0;">Cat</label>
+                    </div>
+                 </div>
+                 <div style="margin-bottom: 15px;"><label for="pet_age">Pet Age (years):</label><input type="number" id="pet_age" name="pet_age" min="0" max="30" step="1" value="{{ pet_details.get('age', 1) }}"></div>
+                 <div style="margin-bottom: 15px;"><label for="pet_weight">Pet Weight (lbs):</label><input type="number" id="pet_weight" name="pet_weight" min="0.1" step="0.1" value="{{ pet_details.get('weight', 5.0) }}"></div>
                  <button type="submit">Update Pet Details</button>
             </form>
         </div>
 
-        <!-- Set Medication Form -->
+        <!-- Set Medication Form (Structure remains the same) -->
         <div class="section">
-             <!-- MODIFIED Header -->
             <h2>💊 Set Medication</h2>
-             <!-- MODIFIED Form Action -->
             <form action="{{ url_for('set_med') }}" method="post" id="set-med-form">
                  <div>
                     <label for="med_name">Medication Name:</label>
-                    <!-- MODIFIED: Pre-fill name if medication exists -->
                     <input type="text" id="med_name" name="med_name" placeholder="e.g., Prednisone" value="{{ current_medication.name if current_medication else '' }}" required>
                  </div>
                  <hr>
                  <h4>Dosage Steps:</h4>
                  <div id="dosage-steps-container">
-                     <!-- MODIFIED: Logic to render existing steps or default first row -->
                      {% if current_medication and current_medication.steps %}
                          {% for step in current_medication.steps %}
                          <div class="dosage-step-row">
@@ -112,7 +120,6 @@
                          </div>
                          {% endfor %}
                      {% else %}
-                         <!-- Default first row if no medication is set -->
                          <div class="dosage-step-row">
                              <div><label>Amount:</label><input type="number" name="dosage_step" min="0.01" step="0.01" required></div>
                              <div><label>Unit Type:</label><select name="type_step" required><option value="Tablet(s)">Tablet(s)</option><option value="mL">mL</option><option value="mg">mg</option></select></div>
@@ -124,20 +131,17 @@
                  </div>
                  <button type="button" id="add-step-btn" class="add-step-button">Add Dosage Step</button>
                  <hr>
-                 <!-- MODIFIED Button Text -->
                  <button type="submit">Set / Update Med</button>
             </form>
         </div>
 
-        <!-- Current Medication Details -->
+        <!-- Current Medication Details (Structure remains the same) -->
         <div class="section">
-             <!-- MODIFIED Header and Content -->
             <h2>📝 Current Medication</h2>
             {% if current_medication %}
                 <div class="med-details">
                     <div class="med-details-header">
                         <strong>{{ current_medication.name }}</strong>
-                        <!-- MODIFIED Form Action -->
                         <form action="{{ url_for('clear_medication') }}" method="post" style="display: inline;">
                              <button type="submit" class="remove-button" title="Clear this medication">❌</button>
                         </form>
@@ -162,31 +166,38 @@
             <div class="controls-row">
                  <div><button id="refresh-calendar-btn">Refresh Calendar</button></div>
                  <div>
-                      <!-- MODIFIED Form Action and Button Text/Condition -->
                      <form action="{{ url_for('clear_medication') }}" method="post" style="display: inline;">
                         <button type="submit" {% if not current_medication %}disabled{% endif %}>Clear Medication</button>
                     </form>
                  </div>
+                 <!-- ADD THIS BUTTON FOR PDF DOWNLOAD -->
+                 <div><button type="button" id="download-pdf-btn" {% if not current_medication %}disabled{% endif %}>Download PDF</button></div>
             </div>
         </div>
 
         <!-- Calendar Display Area -->
+                <!-- Calendar Display Area -->
         <div class="section">
-             <!-- MODIFIED: Display Single Medication Name -->
              <h2>
-                 📅 Medication Calendar
+                 📅 Medication Calendar for:<br>
+                 <span style="font-weight: normal; font-size: 0.9em; display: block; margin-top: 4px;">
+                     {{ pet_details.get('name', 'Your Pet') }}
+                 </span>
                  {% if current_medication %}
-                     for: {{ current_medication.name }}
+                     <span style="font-weight: normal; font-size: 0.9em; display: block; margin-top: 2px;">
+                         {{ current_medication.name }}
+                     </span>
                  {% else %}
-                     (No medication set)
+                     <span style="font-weight: normal; font-size: 0.9em; display: block; margin-top: 2px;">
+                         (No medication set)
+                     </span>
                  {% endif %}
              </h2>
-             <div id='calendar'></div>
+             <div id='calendar'></div> <!-- This is the element we will capture -->
         </div>
 
     </div> <!-- /container -->
 
-    <!-- JavaScript (Keep calendar init and dynamic form logic as is) -->
     <script>
         // Function to get today's date in YYYY-MM-DD format
         function getTodayDate() { /* Keep as is */
@@ -210,26 +221,20 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            // --- Dynamic Form Logic ---
+            // --- Dynamic Form Logic (Keep as is) ---
             const stepsContainer = document.getElementById('dosage-steps-container');
             const addStepBtn = document.getElementById('add-step-btn');
-
-            // Set default date only if no medication is loaded initially
             const firstStartDateInput = stepsContainer.querySelector('.start-date-input');
-            // Check if the container has any step rows already (from backend)
             const hasExistingSteps = stepsContainer.querySelector('.dosage-step-row');
-            if (firstStartDateInput && !hasExistingSteps) { // Only set default if no steps loaded
+            if (firstStartDateInput && !hasExistingSteps) {
                  if (!firstStartDateInput.value) {
                     firstStartDateInput.value = getTodayDate();
                  }
             }
-
-
             addStepBtn.addEventListener('click', function() {
                 const allStepRows = stepsContainer.querySelectorAll('.dosage-step-row');
-                // Find the *template* row to clone - let's assume the first one is always present or create one if needed
-                let templateRow = allStepRows.length > 0 ? allStepRows[0] : null; // Or have a hidden template
-                if (!templateRow) { // Fallback: create a basic row structure if none exist
+                let templateRow = allStepRows.length > 0 ? allStepRows[0] : null;
+                if (!templateRow) {
                     console.warn("No template row found, creating default.");
                     templateRow = document.createElement('div');
                     templateRow.className = 'dosage-step-row';
@@ -241,19 +246,13 @@
                          <div><label>Start Date:</label><input type="date" name="start_date_step" required class="start-date-input"></div>
                     `;
                 }
-
-                const lastStepRow = allStepRows.length > 0 ? allStepRows[allStepRows.length - 1] : templateRow; // Use template if it's the first added row
-                const newStepRow = templateRow.cloneNode(true); // Clone the template or last row
-
-                // Find inputs in the *last actual* row to calculate the next start date
+                const lastStepRow = allStepRows.length > 0 ? allStepRows[allStepRows.length - 1] : templateRow;
+                const newStepRow = templateRow.cloneNode(true);
                 const prevStartDateInput = lastStepRow.querySelector('.start-date-input');
                 const prevDurationInput = lastStepRow.querySelector('.duration-input');
-
-                // Find inputs in the *new* row to clear/set values
                 const newStartDateInput = newStepRow.querySelector('.start-date-input');
                 const newDurationInput = newStepRow.querySelector('.duration-input');
                 const newDosageInput = newStepRow.querySelector('input[name="dosage_step"]');
-
                 let nextStartDate = '';
                 if (prevStartDateInput && prevDurationInput && prevStartDateInput.value && prevDurationInput.value) {
                     const prevDurationDays = parseInt(prevDurationInput.value, 10);
@@ -261,11 +260,9 @@
                          nextStartDate = addDaysToDate(prevStartDateInput.value, prevDurationDays);
                     }
                 }
-
                 if (newStartDateInput) { newStartDateInput.value = nextStartDate || getTodayDate(); }
-                if (newDurationInput) newDurationInput.value = '7'; // Reset duration
-                if (newDosageInput) newDosageInput.value = ''; // Clear dosage
-
+                if (newDurationInput) newDurationInput.value = '7';
+                if (newDosageInput) newDosageInput.value = '';
                 stepsContainer.appendChild(newStepRow);
             });
 
@@ -292,15 +289,15 @@
                 },
                 events: function(fetchInfo, successCallback, failureCallback) {
                     fetch(`/get_schedule_events`)
-                        .then(response => { /* Error handling */
+                        .then(response => {
                             if (!response.ok) { return response.json().then(errData => { throw new Error(errData.error || `HTTP error! status: ${response.status}`); }).catch(() => { throw new Error(`HTTP error! status: ${response.status}`); }); }
                             return response.json();
                         })
-                        .then(data => { /* Data processing */
+                        .then(data => {
                             if (data.error) { throw new Error(data.error); }
                             successCallback(data);
                         })
-                        .catch(error => { /* Failure */
+                        .catch(error => {
                             console.error("Error fetching schedule:", error); failureCallback(error); alert(`Failed to load schedule: ${error.message}. See console for details.`);
                         });
                 }
@@ -310,6 +307,121 @@
             const refreshBtn = document.getElementById('refresh-calendar-btn');
             if (refreshBtn) {
                 refreshBtn.addEventListener('click', function() { console.log("Refreshing calendar events..."); calendar.refetchEvents(); });
+            }
+
+                        // --- ADD PDF DOWNLOAD LOGIC ---
+            const downloadPdfBtn = document.getElementById('download-pdf-btn');
+            if (downloadPdfBtn) {
+                downloadPdfBtn.addEventListener('click', function() {
+                    if (this.disabled) return; // Prevent action if button is disabled
+
+                    const calendarElementToCapture = document.getElementById('calendar');
+                    const calendarTitleElement = calendarElementToCapture.previousElementSibling; // Gets the <h2> title
+
+                    // Sanitize names for filename
+                    const petName = ("{{ pet_details.get('name', 'Your_Pet') }}").replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                    const medName = ("{{ current_medication.name if current_medication else 'Medication' }}").replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                    const fileName = `${petName}_${medName}_schedule.pdf`;
+
+                    downloadPdfBtn.textContent = 'Generating...';
+                    downloadPdfBtn.disabled = true;
+
+                    const options = {
+                        scale: 2,
+                        useCORS: true,
+                        logging: false,
+                        backgroundColor: '#ffffff'
+                    };
+
+                    html2canvas(calendarElementToCapture, options).then(canvas => {
+                        const imgData = canvas.toDataURL('image/png');
+                        const { jsPDF } = window.jspdf;
+
+                        const pdf = new jsPDF({
+                            orientation: 'portrait',
+                            unit: 'mm',
+                            format: 'a4'
+                        });
+
+                        const pageHeight = pdf.internal.pageSize.getHeight();
+                        const pageWidth = pdf.internal.pageSize.getWidth();
+                        const margin = 10; // 10mm margin for all content from left
+
+                        let currentY = margin + 5; // Initial Y for the first line of the title
+                        const titleLineSpacing = 2; // Additional space in mm between title parts
+
+                        if (calendarTitleElement) {
+                            const childNodes = calendarTitleElement.childNodes;
+                            let titleParts = [];
+
+                            // Extract text from H2, respecting the structure
+                            childNodes.forEach(node => {
+                                if (node.nodeType === Node.TEXT_NODE) {
+                                    let text = node.textContent.trim();
+                                    if (text) titleParts.push({ text: text, type: 'main' });
+                                } else if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'SPAN') {
+                                    let text = node.textContent.trim();
+                                    if (text) titleParts.push({ text: text, type: 'sub' });
+                                }
+                            });
+
+                            titleParts.forEach(part => {
+                                let textToPrint = part.text;
+                                if (part.type === 'main') {
+                                    textToPrint = textToPrint.replace(/📅\s*/, '').trim(); // Remove emoji
+                                    pdf.setFontSize(16);
+                                    pdf.setFont('helvetica', 'bold'); // Main title style
+                                } else { // 'sub' for pet and med names
+                                    pdf.setFontSize(14);
+                                    pdf.setFont('helvetica', 'normal'); // Sub-line style
+                                }
+
+                                if (textToPrint) {
+                                    const wrappedText = pdf.splitTextToSize(textToPrint, pageWidth - (margin * 2));
+                                    pdf.text(wrappedText, margin, currentY); // X is always 'margin' for left alignment
+                                    currentY += pdf.getTextDimensions(wrappedText).h + titleLineSpacing;
+                                }
+                            });
+                             // Reduce the last added titleLineSpacing as there's no line after the last title part
+                            if (titleParts.length > 0) {
+                                currentY -= titleLineSpacing;
+                            }
+                        }
+
+
+                        // Calculate image dimensions to fit page with aspect ratio
+                        const imgProps = pdf.getImageProperties(imgData);
+                        let imgWidth = pageWidth - (margin * 2);
+                        let imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+                        // Adjust imgYPosition to be after the full title block
+                        let imgYPosition = currentY + 5; // Add 5mm space after the title
+
+                        // Check if image is too tall for one page
+                        if (imgHeight > (pageHeight - imgYPosition - margin)) {
+                            imgHeight = pageHeight - imgYPosition - margin;
+                            imgWidth = (imgProps.width * imgHeight) / imgProps.height;
+                            if (imgWidth < (pageWidth - (margin * 2))) {
+                                const newX = margin + ((pageWidth - (margin * 2) - imgWidth) / 2);
+                                pdf.addImage(imgData, 'PNG', newX, imgYPosition, imgWidth, imgHeight);
+                            } else {
+                                pdf.addImage(imgData, 'PNG', margin, imgYPosition, imgWidth, imgHeight);
+                            }
+                        } else {
+                             pdf.addImage(imgData, 'PNG', margin, imgYPosition, imgWidth, imgHeight);
+                        }
+
+                        pdf.save(fileName);
+
+                        downloadPdfBtn.textContent = 'Download PDF';
+                        downloadPdfBtn.disabled = false;
+
+                    }).catch(error => {
+                        console.error('Error generating PDF:', error);
+                        alert('Sorry, an error occurred while generating the PDF. Check the console for details.');
+                        downloadPdfBtn.textContent = 'Download PDF';
+                        downloadPdfBtn.disabled = false;
+                    });
+                });
             }
         });
     </script>
