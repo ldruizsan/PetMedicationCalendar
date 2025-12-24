@@ -3,7 +3,7 @@
 ## ⚠️ Disclaimer
 **This application is strictly for visualization purposes only.** It is not intended to replace professional veterinary advice, diagnosis, or official medical records. Always verify dosages and schedules with your veterinarian.
 
-## Live Demo
+## Live App
 You can access the deployed application here: **https://pet-medication-scheduler-d358b5192398.herokuapp.com/**
 
 ## Overview
