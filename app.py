@@ -4,7 +4,7 @@ from datetime import date, timedelta, time, datetime
 
 # --- Flask App Initialization ---
 app = Flask(__name__)
-app.secret_key = os.environ.get('FLASK_SECRET_KEY', FLASK_SECRET_KEY)
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'dev_key_for_local_testing')
 
 # --- Constants ---
 DEFAULT_START_TIME = time(8, 0)
