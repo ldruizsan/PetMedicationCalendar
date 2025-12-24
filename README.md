@@ -1,5 +1,11 @@
 # Pet Medication Dosage Scheduler 🐾💊
 
+## ⚠️ Disclaimer
+**This application is strictly for visualization purposes only.** It is not intended to replace professional veterinary advice, diagnosis, or official medical records. Always verify dosages and schedules with your veterinarian.
+
+## Live Demo
+You can access the deployed application here: **https://pet-medication-scheduler-d358b5192398.herokuapp.com/**
+
 ## Overview
 
 The Pet Medication Dosage Scheduler is a web application designed to help pet owners easily create, manage, and visualize medication schedules for their pets. It allows users to input pet details and a single medication regimen with multiple dosage steps, then displays this schedule on an interactive calendar. Users can also download a printable PDF version of the calendar.
